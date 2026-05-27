@@ -119,6 +119,26 @@
 
   .card.net .value { color: var(--point); }
 
+  /* 부가세 토글 */
+  .vat-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: -6px 0 16px;
+    cursor: pointer;
+    flex-wrap: wrap;
+  }
+  .vat-toggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--point);
+    cursor: pointer;
+  }
+  .vat-hint { font-weight: 400; color: var(--muted); font-size: 0.82rem; }
+
   /* 요약·판정 패널 */
   .summary {
     border: 1px solid transparent;
@@ -412,6 +432,8 @@
       </div>
     </section>
 
+    <label class="vat-toggle"><input type="checkbox" id="vat" /> 부가세(VAT 10%) 포함해 보기 <span class="vat-hint">— 스드메·예식장 견적은 보통 부가세 별도예요</span></label>
+
     <div id="summary" class="summary" aria-live="polite"></div>
 
     <section class="group presets">
@@ -493,9 +515,11 @@
     {
       title: "하객·식대",
       items: [
-        { id: "guests", label: "하객 수", min: 30, max: 250, step: 10, value: 200, unit: "명", role: "count" },
+        { id: "guests", label: "하객 수 (실제 참석)", min: 30, max: 250, step: 10, value: 200, unit: "명", role: "count" },
+        { id: "minGuests", label: "보증 인원 (최소 보장 식수)", min: 30, max: 250, step: 10, value: 150, unit: "명", role: "count" },
         { id: "meal", label: "1인당 식대", min: 4, max: 10, step: 0.5, value: 7, unit: "만 원", role: "perGuestCost" },
         { id: "gift", label: "1인당 평균 축의금", min: 0, max: 12, step: 0.5, value: 10, unit: "만 원", role: "perGuestGift" },
+        { id: "giftKeep", label: "우리가 받는 축의금 비율", min: 0, max: 100, step: 5, value: 100, unit: "%", role: "count" },
       ],
     },
     {
@@ -525,6 +549,7 @@
         { id: "invitation", label: "청첩장 (모바일·종이)", min: 0, max: 50, step: 5, value: 15, unit: "만 원" },
         { id: "officiant", label: "사회·축가·주례 사례 (사회자·축가·연주·주례 사례비)", min: 0, max: 100, step: 5, value: 20, unit: "만 원" },
         { id: "pyebaek", label: "폐백 (폐백음식·폐백실, 생략 가능)", min: 0, max: 100, step: 5, value: 20, unit: "만 원" },
+        { id: "planner", label: "웨딩플래너 (직접 준비 시 0)", min: 0, max: 150, step: 10, value: 0, unit: "만 원" },
         { id: "reserve", label: "예비비·기타 (답례품·식전영상·식순지·방명록·예비비 등)", min: 0, max: 200, step: 10, value: 40, unit: "만 원" },
       ],
     },
@@ -532,6 +557,8 @@
 
   const allItems = groups.flatMap((g) => g.items);
   const inputs = {};
+  const vatEl = document.getElementById("vat");
+  vatEl.addEventListener("change", recalc);
 
   function fmt(n) {
     return Math.round(n).toLocaleString("ko-KR");
@@ -599,20 +626,30 @@
       document.getElementById("cur-" + item.id).textContent = fmtVal(v[item.id]) + item.unit;
     });
 
-    // 역할별 합산: count(하객 수)는 제외, perGuestCost/Gift는 하객 수로 곱하고, 나머지는 일시금
+    // 역할별 합산: count·target은 합산 제외.
+    // 식대는 참석 식수와 보증 인원 중 큰 값으로(보증인원 미달분도 부담), 축의금은 실제 참석 기준.
     const guests = v.guests;
+    const dineCount = Math.max(guests, v.minGuests);
     let total = 0;
-    let giftIncome = 0;
+    let giftGross = 0;
     allItems.forEach((item) => {
       if (item.role === "count" || item.role === "target") return;
-      if (item.role === "perGuestCost") total += guests * v[item.id];
-      else if (item.role === "perGuestGift") giftIncome += guests * v[item.id];
+      if (item.role === "perGuestCost") total += dineCount * v[item.id];
+      else if (item.role === "perGuestGift") giftGross += guests * v[item.id];
       else total += v[item.id];
     });
-    const net = total - giftIncome;
+
+    // 부가세(VAT 10%) — 대략적인 총액 가산
+    const vatOn = vatEl.checked;
+    if (vatOn) total = total * 1.1;
+
+    // 축의금 귀속: 우리가 받는 비율만 수입으로
+    const keepRatio = v.giftKeep / 100;
+    const ourGift = giftGross * keepRatio;
+    const net = total - ourGift;
 
     document.getElementById("out-total").textContent = fmt(total);
-    document.getElementById("out-gift").textContent = fmt(giftIncome);
+    document.getElementById("out-gift").textContent = fmt(ourGift);
     document.getElementById("out-net").textContent = fmt(net);
 
     const netLine =
@@ -628,6 +665,18 @@
       insight = `하객 한 분당 축의금과 식대가 ${fmtVal(v.meal)}만 원으로 같아, 하객 수는 순 부담액에 큰 영향이 없어요.`;
     } else {
       insight = `하객 한 분당 식대(${fmtVal(v.meal)}만 원)가 축의금(${fmtVal(v.gift)}만 원)보다 ${fmtVal(-diff)}만 원 많아, 하객이 늘수록 순 부담이 커져요.`;
+    }
+
+    const extras = [insight];
+    if (dineCount > guests) {
+      const empty = dineCount - guests;
+      extras.push(`보증인원이 참석(${fmt(guests)}명)보다 ${fmt(empty)}명 많아, 빈자리 식대 약 <strong>${fmt(empty * v.meal)}만 원</strong>을 더 부담해요.`);
+    }
+    if (keepRatio < 1) {
+      extras.push(`전체 축의금 ${fmt(giftGross)}만 원 중 ${fmt(v.giftKeep)}%(${fmt(ourGift)}만 원)만 우리 몫으로 계산했어요.`);
+    }
+    if (vatOn) {
+      extras.push(`총 지출에 부가세 10%를 더해 표시 중이에요 (대략적인 가산).`);
     }
 
     const target = v.target;
@@ -648,7 +697,7 @@
       `<div class="sub">${sub}</div>` +
       `<div class="detail">` +
       `<div class="net">${netLine}</div>` +
-      `<div class="insight">${insight}</div>` +
+      extras.map((d) => `<div class="insight">${d}</div>`).join("") +
       `</div>`;
   }
 
@@ -657,7 +706,9 @@
   const shareStatus = document.getElementById("share-status");
 
   function pairs() {
-    return allItems.map((item) => item.id + "=" + parseFloat(inputs[item.id].value));
+    const arr = allItems.map((item) => item.id + "=" + parseFloat(inputs[item.id].value));
+    arr.push("vat=" + (vatEl.checked ? 1 : 0));
+    return arr;
   }
 
   function buildCode() {
@@ -688,6 +739,10 @@
         applied++;
       }
     });
+    if ("vat" in map) {
+      vatEl.checked = map.vat >= 1;
+      applied++;
+    }
     return applied;
   }
 
