@@ -15,8 +15,13 @@
     --border: #e8ddd2;
     --track: #ece2d7;
 
+    --ok-bg: #e7f3e3;
     --ok-text: #336b37;
+    --ok-border: #c3e0bd;
+
+    --warn-bg: #fbeed6;
     --warn-text: #8a5a1f;
+    --warn-border: #ecd5a8;
 
     --shadow: 0 1px 2px rgba(58, 50, 44, 0.06);
   }
@@ -32,8 +37,13 @@
       --border: #3a332e;
       --track: #443c35;
 
+      --ok-bg: #28361f;
       --ok-text: #a8d49b;
+      --ok-border: #3c5230;
+
+      --warn-bg: #3d3320;
       --warn-text: #e6bd7e;
+      --warn-border: #5a4a2c;
 
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     }
@@ -109,29 +119,46 @@
 
   .card.net .value { color: var(--point); }
 
-  /* 요약 패널 */
+  /* 요약·판정 패널 */
   .summary {
-    background: var(--point-soft);
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     border-radius: 14px;
     padding: 16px 18px;
     margin-bottom: 24px;
-    color: var(--text);
   }
 
-  .summary .net {
+  .summary.ok {
+    background: var(--ok-bg);
+    color: var(--ok-text);
+    border-color: var(--ok-border);
+  }
+
+  .summary.over {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    border-color: var(--warn-border);
+  }
+
+  .summary .headline {
     font-size: 1.05rem;
     font-weight: 700;
+    margin-bottom: 4px;
   }
 
-  .summary .net strong { color: var(--point); }
+  .summary .sub { font-size: 0.9rem; opacity: 0.9; }
+
+  .summary .detail {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed currentColor;
+  }
+
+  .summary .net { font-size: 0.98rem; font-weight: 700; }
 
   .summary .insight {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--border);
-    font-size: 0.92rem;
-    color: var(--muted);
+    margin-top: 6px;
+    font-size: 0.9rem;
+    opacity: 0.85;
     line-height: 1.55;
   }
 
@@ -374,6 +401,12 @@
 <script>
   const groups = [
     {
+      title: "목표 예산",
+      items: [
+        { id: "target", label: "맞추고 싶은 총 지출", min: 1500, max: 3500, step: 50, value: 2000, unit: "만 원", role: "target" },
+      ],
+    },
+    {
       title: "하객·식대",
       items: [
         { id: "guests", label: "하객 수", min: 30, max: 250, step: 10, value: 150, unit: "명", role: "count" },
@@ -490,7 +523,7 @@
     let total = 0;
     let giftIncome = 0;
     allItems.forEach((item) => {
-      if (item.role === "count") return;
+      if (item.role === "count" || item.role === "target") return;
       if (item.role === "perGuestCost") total += guests * v[item.id];
       else if (item.role === "perGuestGift") giftIncome += guests * v[item.id];
       else total += v[item.id];
@@ -516,9 +549,26 @@
       insight = `하객 한 분당 식대(${fmtVal(v.meal)}만 원)가 축의금(${fmtVal(v.gift)}만 원)보다 ${fmtVal(-diff)}만 원 많아, 하객이 늘수록 순 부담이 커져요.`;
     }
 
-    document.getElementById("summary").innerHTML =
+    const target = v.target;
+    const within = total <= target;
+    let headline, sub;
+    if (within) {
+      headline = `목표 ${fmt(target)}만 원 안에 들어와요 🎉`;
+      sub = `목표까지 ${fmt(target - total)}만 원 여유가 있어요.`;
+    } else {
+      headline = `목표 ${fmt(target)}만 원을 ${fmt(total - target)}만 원 초과`;
+      sub = `하객 수나 항목별 비용을 줄이면 목표에 맞출 수 있어요.`;
+    }
+
+    const summaryEl = document.getElementById("summary");
+    summaryEl.className = "summary " + (within ? "ok" : "over");
+    summaryEl.innerHTML =
+      `<div class="headline">${headline}</div>` +
+      `<div class="sub">${sub}</div>` +
+      `<div class="detail">` +
       `<div class="net">${netLine}</div>` +
-      `<div class="insight">${insight}</div>`;
+      `<div class="insight">${insight}</div>` +
+      `</div>`;
   }
 
   // ---- 설정 공유 (링크 / 코드) ----
