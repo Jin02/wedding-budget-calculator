@@ -416,7 +416,7 @@
 
     <section class="group presets">
       <h2>빠른 설정 (지역·시기)</h2>
-      <p class="preset-desc">지역과 예식 시기를 고르면 <strong>식대·예식장·스드메</strong>가 그 평균으로 맞춰져요. 4~6월은 봄 성수기라 비용이 비슷하고, 7월은 여름 비수기라 낮아져요. 나머지 항목은 직접 조절하세요.</p>
+      <p class="preset-desc">지역과 예식 시기를 고르면 <strong>식대·예식장·스드메</strong>가 그 평균으로 맞춰져요. 봄(3~6월)·가을(9~11월)은 성수기, 여름(7~8월)·겨울(12~2월)은 비수기라 더 저렴해요. 나머지 항목은 직접 조절하세요.</p>
       <div class="preset-row">
         <span class="preset-label">지역</span>
         <div class="preset-btns" id="region-btns">
@@ -428,10 +428,18 @@
       <div class="preset-row">
         <span class="preset-label">시기</span>
         <div class="preset-btns" id="month-btns">
+          <button type="button" data-month="1">1월</button>
+          <button type="button" data-month="2">2월</button>
+          <button type="button" data-month="3">3월</button>
           <button type="button" data-month="4">4월</button>
           <button type="button" data-month="5">5월</button>
           <button type="button" data-month="6">6월</button>
           <button type="button" data-month="7">7월</button>
+          <button type="button" data-month="8">8월</button>
+          <button type="button" data-month="9">9월</button>
+          <button type="button" data-month="10">10월</button>
+          <button type="button" data-month="11">11월</button>
+          <button type="button" data-month="12">12월</button>
         </div>
       </div>
       <p class="preset-note" id="preset-note" aria-live="polite"></p>
@@ -743,8 +751,10 @@
     seoul:    { meal: 7,   venue: 400, sdm: 450 },
     gyeonggi: { meal: 6.5, venue: 350, sdm: 400 },
   };
-  // 봄(3~6월)·가을(9~11월)은 성수기. 여기선 4~6월 성수기, 7월 비수기.
+  // 봄(3~6월)·가을(9~11월)은 성수기, 여름(7~8월)·겨울(12~2월)은 비수기.
   const isPeak = (m) => (m >= 3 && m <= 6) || (m >= 9 && m <= 11);
+  const seasonName = (m) =>
+    m >= 3 && m <= 6 ? "봄" : m >= 7 && m <= 8 ? "여름" : m >= 9 && m <= 11 ? "가을" : "겨울";
 
   const itemById = Object.fromEntries(allItems.map((i) => [i.id, i]));
   let selRegion = "seoul";
@@ -780,9 +790,10 @@
   }
 
   function updateNote() {
+    const s = seasonName(selMonth);
     presetNote.textContent = isPeak(selMonth)
-      ? `${selMonth}월은 봄 성수기예요 — 대관료·식대·스드메가 높은 시기.`
-      : `${selMonth}월은 여름 비수기예요 — 대관료·식대·스드메가 성수기보다 낮아요.`;
+      ? `${selMonth}월은 ${s} 성수기예요 — 대관료·식대·스드메가 높은 시기.`
+      : `${selMonth}월은 ${s} 비수기예요 — 대관료·식대·스드메가 성수기보다 낮아요.`;
   }
 
   regionBtns.addEventListener("click", (e) => {
