@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>결혼식 예산 계산기 (목표 2000만 원)</title>
+<title>결혼식 예산 계산기</title>
 <style>
   :root {
     --bg: #faf6f1;
@@ -15,13 +15,8 @@
     --border: #e8ddd2;
     --track: #ece2d7;
 
-    --ok-bg: #e7f3e3;
     --ok-text: #336b37;
-    --ok-border: #c3e0bd;
-
-    --warn-bg: #fbeed6;
     --warn-text: #8a5a1f;
-    --warn-border: #ecd5a8;
 
     --shadow: 0 1px 2px rgba(58, 50, 44, 0.06);
   }
@@ -37,13 +32,8 @@
       --border: #3a332e;
       --track: #443c35;
 
-      --ok-bg: #28361f;
       --ok-text: #a8d49b;
-      --ok-border: #3c5230;
-
-      --warn-bg: #3d3320;
       --warn-text: #e6bd7e;
-      --warn-border: #5a4a2c;
 
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     }
@@ -119,40 +109,30 @@
 
   .card.net .value { color: var(--point); }
 
-  /* 판정 메시지 */
-  .verdict {
+  /* 요약 패널 */
+  .summary {
+    background: var(--point-soft);
+    border: 1px solid var(--border);
     border-radius: 14px;
     padding: 16px 18px;
     margin-bottom: 24px;
-    border: 1px solid transparent;
+    color: var(--text);
   }
 
-  .verdict.ok {
-    background: var(--ok-bg);
-    color: var(--ok-text);
-    border-color: var(--ok-border);
-  }
-
-  .verdict.warn {
-    background: var(--warn-bg);
-    color: var(--warn-text);
-    border-color: var(--warn-border);
-  }
-
-  .verdict .headline {
+  .summary .net {
     font-size: 1.05rem;
     font-weight: 700;
-    margin-bottom: 4px;
   }
 
-  .verdict .sub { font-size: 0.9rem; opacity: 0.9; }
+  .summary .net strong { color: var(--point); }
 
-  .verdict .net {
+  .summary .insight {
     margin-top: 10px;
     padding-top: 10px;
-    border-top: 1px dashed currentColor;
-    font-size: 0.95rem;
-    font-weight: 600;
+    border-top: 1px dashed var(--border);
+    font-size: 0.92rem;
+    color: var(--muted);
+    line-height: 1.55;
   }
 
   /* 슬라이더 그룹 */
@@ -341,7 +321,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>결혼식 예산 계산기 (목표 2000만 원)</h1>
+      <h1>결혼식 예산 계산기</h1>
       <p>슬라이더를 움직여 우리 조건에 맞춰보세요. 혼수·신혼여행은 제외한 순수 예식 비용이에요. 축의금은 회수되는 돈이라 순 부담액은 따로 계산돼요.</p>
       <p class="note">기본값은 서울·경기 지역의 최근 평균을 가정한 값이에요. 우리 상황에 맞게 자유롭게 조절하세요.</p>
     </header>
@@ -361,7 +341,7 @@
       </div>
     </section>
 
-    <div id="verdict" class="verdict ok" aria-live="polite"></div>
+    <div id="summary" class="summary" aria-live="polite"></div>
 
     <div id="controls"></div>
 
@@ -396,9 +376,9 @@
     {
       title: "하객·식대",
       items: [
-        { id: "guests", label: "하객 수", min: 30, max: 250, step: 10, value: 150, unit: "명" },
-        { id: "meal", label: "1인당 식대", min: 4, max: 10, step: 0.5, value: 7, unit: "만 원" },
-        { id: "gift", label: "1인당 평균 축의금", min: 0, max: 12, step: 0.5, value: 8, unit: "만 원" },
+        { id: "guests", label: "하객 수", min: 30, max: 250, step: 10, value: 150, unit: "명", role: "count" },
+        { id: "meal", label: "1인당 식대", min: 4, max: 10, step: 0.5, value: 7, unit: "만 원", role: "perGuestCost" },
+        { id: "gift", label: "1인당 평균 축의금", min: 0, max: 12, step: 0.5, value: 8, unit: "만 원", role: "perGuestGift" },
       ],
     },
     {
@@ -425,12 +405,18 @@
     {
       title: "기타",
       items: [
-        { id: "etc", label: "기타 (청첩장·답례품·부케·사회/축가 사례·폐백 등)", min: 0, max: 400, step: 50, value: 200, unit: "만 원" },
+        { id: "invitation", label: "청첩장 (모바일·종이)", min: 0, max: 50, step: 5, value: 15, unit: "만 원" },
+        { id: "favors", label: "답례품 (하객 답례 선물)", min: 0, max: 150, step: 10, value: 40, unit: "만 원" },
+        { id: "bouquet", label: "부케·부토니에", min: 0, max: 50, step: 5, value: 15, unit: "만 원" },
+        { id: "mc", label: "사회·축가·연주 사례", min: 0, max: 100, step: 5, value: 30, unit: "만 원" },
+        { id: "pyebaek", label: "폐백·이바지 (폐백음식·폐백실)", min: 0, max: 150, step: 10, value: 40, unit: "만 원" },
+        { id: "helper", label: "본식 도우미·메이크업 헬퍼", min: 0, max: 50, step: 5, value: 20, unit: "만 원" },
+        { id: "reserve", label: "예비비·기타 소품 (식전영상·식순지·방명록 등)", min: 0, max: 200, step: 10, value: 30, unit: "만 원" },
       ],
     },
   ];
 
-  const TARGET = 2000;
+  const allItems = groups.flatMap((g) => g.items);
   const inputs = {};
 
   function fmt(n) {
@@ -477,7 +463,6 @@
       input.step = item.step;
       input.value = item.value;
       input.setAttribute("aria-label", item.label);
-      input.dataset.unit = item.unit;
 
       input.addEventListener("input", recalc);
 
@@ -493,43 +478,50 @@
 
   function recalc() {
     const v = {};
-    for (const id in inputs) v[id] = parseFloat(inputs[id].value);
+    allItems.forEach((item) => { v[item.id] = parseFloat(inputs[item.id].value); });
 
     // 슬라이더 옆 현재값 표시
-    for (const id in inputs) {
-      const unit = inputs[id].dataset.unit;
-      document.getElementById("cur-" + id).textContent = fmtVal(v[id]) + unit;
-    }
+    allItems.forEach((item) => {
+      document.getElementById("cur-" + item.id).textContent = fmtVal(v[item.id]) + item.unit;
+    });
 
-    const mealTotal = v.guests * v.meal;
-    const total = mealTotal + v.venue + v.sdm + v.snap + v.suit + v.jewelry + v.yedan + v.etc;
-    const giftIncome = v.guests * v.gift;
+    // 역할별 합산: count(하객 수)는 제외, perGuestCost/Gift는 하객 수로 곱하고, 나머지는 일시금
+    const guests = v.guests;
+    let total = 0;
+    let giftIncome = 0;
+    allItems.forEach((item) => {
+      if (item.role === "count") return;
+      if (item.role === "perGuestCost") total += guests * v[item.id];
+      else if (item.role === "perGuestGift") giftIncome += guests * v[item.id];
+      else total += v[item.id];
+    });
     const net = total - giftIncome;
 
     document.getElementById("out-total").textContent = fmt(total);
     document.getElementById("out-gift").textContent = fmt(giftIncome);
     document.getElementById("out-net").textContent = fmt(net);
 
-    const verdict = document.getElementById("verdict");
-    const netLine = `순 부담액(총 지출 − 축의금)은 <strong>${fmt(net)}만 원</strong>이에요.`;
+    const netLine =
+      net >= 0
+        ? `순 부담액(총 지출 − 축의금)은 <strong>${fmt(net)}만 원</strong>이에요.`
+        : `축의금이 총 지출보다 많아, 오히려 <strong>${fmt(-net)}만 원</strong> 남아요.`;
 
-    if (total <= TARGET) {
-      verdict.className = "verdict ok";
-      verdict.innerHTML =
-        `<div class="headline">목표 2000만 원 안에 들어와요 🎉</div>` +
-        `<div class="net">${netLine}</div>`;
+    const diff = v.gift - v.meal;
+    let insight;
+    if (diff > 0) {
+      insight = `하객 한 분당 축의금(${fmtVal(v.gift)}만 원)이 식대(${fmtVal(v.meal)}만 원)보다 ${fmtVal(diff)}만 원 많아, 하객이 늘수록 순 부담이 줄어요.`;
+    } else if (diff === 0) {
+      insight = `하객 한 분당 축의금과 식대가 ${fmtVal(v.meal)}만 원으로 같아, 하객 수는 순 부담액에 큰 영향이 없어요.`;
     } else {
-      const over = total - TARGET;
-      verdict.className = "verdict warn";
-      verdict.innerHTML =
-        `<div class="headline">2000만 원을 ${fmt(over)}만 원 초과</div>` +
-        `<div class="sub">하객 수나 식대를 줄이면 맞출 수 있어요.</div>` +
-        `<div class="net">${netLine}</div>`;
+      insight = `하객 한 분당 식대(${fmtVal(v.meal)}만 원)가 축의금(${fmtVal(v.gift)}만 원)보다 ${fmtVal(-diff)}만 원 많아, 하객이 늘수록 순 부담이 커져요.`;
     }
+
+    document.getElementById("summary").innerHTML =
+      `<div class="net">${netLine}</div>` +
+      `<div class="insight">${insight}</div>`;
   }
 
   // ---- 설정 공유 (링크 / 코드) ----
-  const allItems = groups.flatMap((g) => g.items);
   const codeBox = document.getElementById("code-box");
   const shareStatus = document.getElementById("share-status");
 
