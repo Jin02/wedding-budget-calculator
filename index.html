@@ -329,6 +329,50 @@
   }
   .share-status.err { color: var(--warn-text); }
 
+  /* 빠른 설정 프리셋 */
+  .preset-desc { font-size: 0.88rem; color: var(--muted); margin: 4px 0 10px; }
+
+  .preset-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .preset-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+    min-width: 36px;
+  }
+
+  .preset-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .preset-btns button {
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    border: 1px solid var(--point);
+    background: transparent;
+    color: var(--point);
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .preset-btns button.active { background: var(--point); color: #fff; }
+
+  .preset-note {
+    font-size: 0.85rem;
+    color: var(--muted);
+    background: var(--point-soft);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 12px 0 0;
+    min-height: 1.1em;
+  }
+
   footer {
     text-align: center;
     color: var(--muted);
@@ -369,6 +413,29 @@
     </section>
 
     <div id="summary" class="summary" aria-live="polite"></div>
+
+    <section class="group presets">
+      <h2>빠른 설정 (지역·시기)</h2>
+      <p class="preset-desc">지역과 예식 시기를 고르면 <strong>식대·예식장·스드메</strong>가 그 평균으로 맞춰져요. 4~6월은 봄 성수기라 비용이 비슷하고, 7월은 여름 비수기라 낮아져요. 나머지 항목은 직접 조절하세요.</p>
+      <div class="preset-row">
+        <span class="preset-label">지역</span>
+        <div class="preset-btns" id="region-btns">
+          <button type="button" data-region="gangnam">서울 강남</button>
+          <button type="button" data-region="seoul">서울(그 외)</button>
+          <button type="button" data-region="gyeonggi">경기 (판교·과천 등)</button>
+        </div>
+      </div>
+      <div class="preset-row">
+        <span class="preset-label">시기</span>
+        <div class="preset-btns" id="month-btns">
+          <button type="button" data-month="4">4월</button>
+          <button type="button" data-month="5">5월</button>
+          <button type="button" data-month="6">6월</button>
+          <button type="button" data-month="7">7월</button>
+        </div>
+      </div>
+      <p class="preset-note" id="preset-note" aria-live="polite"></p>
+    </section>
 
     <div id="controls"></div>
 
@@ -668,6 +735,77 @@
       setStatus("코드를 인식하지 못했어요. 받은 코드(또는 링크) 전체를 붙여넣었는지 확인해 주세요.", true);
     }
   });
+
+  // ---- 빠른 설정 (지역·시기 프리셋) ----
+  // 지역별 기준값(성수기 기준). 식대·예식장(대관료+꽃)·스드메만 조정.
+  const regionBase = {
+    gangnam:  { meal: 8.5, venue: 550, sdm: 550 },
+    seoul:    { meal: 7,   venue: 400, sdm: 450 },
+    gyeonggi: { meal: 6.5, venue: 350, sdm: 400 },
+  };
+  // 봄(3~6월)·가을(9~11월)은 성수기. 여기선 4~6월 성수기, 7월 비수기.
+  const isPeak = (m) => (m >= 3 && m <= 6) || (m >= 9 && m <= 11);
+
+  const itemById = Object.fromEntries(allItems.map((i) => [i.id, i]));
+  let selRegion = "seoul";
+  let selMonth = 5;
+
+  const regionBtns = document.getElementById("region-btns");
+  const monthBtns = document.getElementById("month-btns");
+  const presetNote = document.getElementById("preset-note");
+
+  function setSlider(id, val) {
+    inputs[id].value = clampSnap(itemById[id], val);
+  }
+
+  function applyPreset() {
+    const b = regionBase[selRegion];
+    let meal = b.meal, venue = b.venue, sdm = b.sdm;
+    if (!isPeak(selMonth)) {
+      // 비수기: 식대 -1만, 대관료 -15%, 스드메 -10%
+      meal = b.meal - 1;
+      venue = b.venue * 0.85;
+      sdm = b.sdm * 0.9;
+    }
+    setSlider("meal", meal);
+    setSlider("venue", venue);
+    setSlider("sdm", sdm);
+    recalc();
+  }
+
+  function highlight(container, attr, val) {
+    container.querySelectorAll("button").forEach((b) =>
+      b.classList.toggle("active", b.dataset[attr] === String(val))
+    );
+  }
+
+  function updateNote() {
+    presetNote.textContent = isPeak(selMonth)
+      ? `${selMonth}월은 봄 성수기예요 — 대관료·식대·스드메가 높은 시기.`
+      : `${selMonth}월은 여름 비수기예요 — 대관료·식대·스드메가 성수기보다 낮아요.`;
+  }
+
+  regionBtns.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    selRegion = btn.dataset.region;
+    highlight(regionBtns, "region", selRegion);
+    applyPreset();
+  });
+
+  monthBtns.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    selMonth = parseInt(btn.dataset.month, 10);
+    highlight(monthBtns, "month", selMonth);
+    updateNote();
+    applyPreset();
+  });
+
+  // 초기에는 강조 표시만(값은 기본 슬라이더값=서울·성수기와 동일). 링크로 들어온 값은 덮어쓰지 않음.
+  highlight(regionBtns, "region", selRegion);
+  highlight(monthBtns, "month", selMonth);
+  updateNote();
 
   // 링크(#값)로 들어왔으면 그 설정을 먼저 적용한 뒤 첫 계산
   if (location.hash.length > 1) {
